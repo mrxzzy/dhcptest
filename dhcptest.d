@@ -894,6 +894,7 @@ version(Posix) int getIfaceIndex(Socket s, string name)
 int run(string[] args)
 {
 	string bindAddr = "0.0.0.0";
+  string server = null;
 	string iface = null;
 	ubyte[] defaultMac = 6.iota.map!(i => i == 0 ? ubyte((uniform!ubyte & 0xFC) | 0x02u) : uniform!ubyte).array;
 	bool help, query, wait, raw;
@@ -917,6 +918,7 @@ int run(string[] args)
 		"timeout", &timeoutSeconds,
 		"tries", &tries,
 		"option", &sentOptions,
+    "server", &server,
 	);
 
 	if (wait) enforce(query, "Option --wait only supported with --query");
@@ -972,6 +974,7 @@ int run(string[] args)
 		stderr.writeln("                  You can specify a desired format using the syntax N[FORMAT]");
 		stderr.writeln("                  See above for a list of FORMATs. For example:");
 		stderr.writeln("                  --print-only \"N[hex]\" or --print-only \"N[IP]\"");
+    stderr.writeln("  --server IPADDR Specify a DHCP server to test against.");
 		stderr.writeln("  --timeout N     Wait N seconds for a reply, after which retry or exit.");
 		stderr.writeln("                  Default is 60 seconds. Can be a fractional number.");
 		stderr.writeln("                  A value of 0 causes dhcptest to wait indefinitely.");
@@ -1003,6 +1006,12 @@ int run(string[] args)
 		else
 			throw new Exception("Raw sockets are not supported on this platform.");
 	}
+  else if (server)
+  {
+    stderr.writeln("sending request");
+		sendSocket = receiveSocket;
+		sendAddr = new InternetAddress(server, SERVER_PORT);
+  }
 	else
 	{
 		sendSocket = receiveSocket;

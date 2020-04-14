@@ -60,6 +60,10 @@ For a list and description of DHCP options, see [RFC 2132](http://tools.ietf.org
 
 ## Changelog
 
+### dhcptest-mrxzzy v0.8 (2020-04-14)
+  * Added --server option to specify a DHCP server to query against.
+    Argument is the IP address.
+
 ### dhcptest v0.7 (2017-08-03)
 
  * Refactor and improve option value parsing
