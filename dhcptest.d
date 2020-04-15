@@ -1184,6 +1184,7 @@ int run(string[] args)
     if(cmk)
     {
       stdout.writefln("DHCP CRITICAL: sent dhcp discover to %s and got no response.", server);
+      return 2;
     }
 		return 1;
 	}
