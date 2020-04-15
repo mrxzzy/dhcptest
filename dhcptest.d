@@ -168,14 +168,14 @@ align(1):
 }
 
 /*
-35 01 02 
-0F 17 68 6F 6D 65 2E 74 68 65 63 79 62 65 72 73 68 61 64 6F 77 2E 6E 65 74 
-01 04 FF FF FF 00 
-06 04 C0 A8 00 01 
-03 04 C0 A8 00 01 
-05 04 C0 A8 00 01 
-36 04 C0 A8 00 01 
-33 04 00 00 8C A0 
+35 01 02
+0F 17 68 6F 6D 65 2E 74 68 65 63 79 62 65 72 73 68 61 64 6F 77 2E 6E 65 74
+01 04 FF FF FF 00
+06 04 C0 A8 00 01
+03 04 C0 A8 00 01
+05 04 C0 A8 00 01
+36 04 C0 A8 00 01
+33 04 00 00 8C A0
 FF
 */
 
@@ -897,7 +897,7 @@ int run(string[] args)
   string server = null;
 	string iface = null;
 	ubyte[] defaultMac = 6.iota.map!(i => i == 0 ? ubyte((uniform!ubyte & 0xFC) | 0x02u) : uniform!ubyte).array;
-	bool help, query, wait, raw;
+	bool help, query, wait, raw, cmk;
 	float timeoutSeconds = 60f;
 	uint tries = 1;
 
@@ -919,20 +919,32 @@ int run(string[] args)
 		"tries", &tries,
 		"option", &sentOptions,
     "server", &server,
+    "cmk", &cmk,
 	);
 
+  if(cmk)
+  {
+    //hardcore some options when in check_mk mode
+    quiet = true;
+    query = true;
+    timeoutSeconds = 3;
+    tries = 1;
+  }
+
 	if (wait) enforce(query, "Option --wait only supported with --query");
-	
+
 	/// https://issues.dlang.org/show_bug.cgi?id=6725
 	auto timeout = dur!"hnsecs"(cast(long)(convert!("seconds", "hnsecs")(1) * timeoutSeconds));
 
+
 	if (!quiet)
 	{
-		stderr.writeln("dhcptest v0.7 - Created by Vladimir Panteleev");
-		stderr.writeln("https://github.com/CyberShadow/dhcptest");
+		stderr.writeln("dhcptest v0.8 - Created by Vladimir Panteleev, forked by Seth Graham");
+		stderr.writeln("https://github.com/mrxzzy/dhcptest");
 		stderr.writeln("Run with --help for a list of command-line options.");
 		stderr.writeln();
 	}
+
 
 	if (help)
 	{
@@ -980,6 +992,7 @@ int run(string[] args)
 		stderr.writeln("                  A value of 0 causes dhcptest to wait indefinitely.");
 		stderr.writeln("  --tries N       Send N DHCP discover packets after each timeout interval.");
 		stderr.writeln("                  Specify N=0 to retry indefinitely.");
+    stderr.writeln("  --cmk           Output as a check_mk check.");
 		return 0;
 	}
 
@@ -1008,7 +1021,6 @@ int run(string[] args)
 	}
   else if (server)
   {
-    stderr.writeln("sending request");
 		sendSocket = receiveSocket;
 		sendAddr = new InternetAddress(server, SERVER_PORT);
   }
@@ -1127,7 +1139,7 @@ int run(string[] args)
 		auto sentPacket = generatePacket(defaultMac);
 
 		int count = 0;
-		
+
 		foreach (t; 0..tries)
 		{
 			if (!quiet && t) stderr.writefln("Retrying, try %d...", t+1);
@@ -1136,7 +1148,7 @@ int run(string[] args)
 			SysTime end = start + timeout;
 
 			sendSocket.sendPacket(sendAddr, defaultMac, sentPacket);
-			
+
 			while (true)
 			{
 				auto remaining = end - Clock.currTime();
@@ -1148,7 +1160,11 @@ int run(string[] args)
 					if (packet.header.xid != sentPacket.header.xid)
 						return true;
 					if (!quiet) stderr.writefln("Received packet from %s:", address);
-					stdout.printPacket(packet);
+          if(!cmk) stdout.printPacket(packet);
+          if(cmk)
+          {
+            stdout.writefln("DHCP OK: sent dhcp discover to %s and got a response.", server);
+          }
 					return false;
 				}, remaining);
 
@@ -1164,6 +1180,11 @@ int run(string[] args)
 		}
 
 		if (!quiet) stderr.writefln("Giving up after %d %s.", tries, tries==1 ? "try" : "tries");
+    // ADD CMK CRITICAL here
+    if(cmk)
+    {
+      stdout.writefln("DHCP CRITICAL: sent dhcp discover to %s and got no response.", server);
+    }
 		return 1;
 	}
 

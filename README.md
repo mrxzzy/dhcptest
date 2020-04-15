@@ -63,6 +63,10 @@ For a list and description of DHCP options, see [RFC 2132](http://tools.ietf.org
 ### dhcptest-mrxzzy v0.8 (2020-04-14)
   * Added --server option to specify a DHCP server to query against.
     Argument is the IP address.
+  * Added --cmk option to generate output suitable for use as a nagios
+    MRPE check. Sample usage:
+    ./dhcptest --cmk --mac HWADDR --server IPADDRESS
+    Note that this option automatically enables --query, --quiet, --tries 1 and --timeout 3
 
 ### dhcptest v0.7 (2017-08-03)
 
